@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { db } from '../firebase';
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Activity, BrainCircuit, Zap, Clock } from 'lucide-react';
 import './Dashboard.css';
@@ -16,14 +14,19 @@ export default function Dashboard() {
     async function fetchData() {
       if (!currentUser) return;
       try {
-        const q = query(
-          collection(db, "Conversations"), 
-          where("userId", "==", currentUser.uid),
-          orderBy("createdAt", "desc")
-        );
-        const snapshot = await getDocs(q);
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const res = await fetch('http://localhost:5000/api/ai/history', {
+          headers: {
+            'x-auth-token': token
+          }
+        });
+        const historyData = await res.json();
         
-        const total = snapshot.size;
+        if (!res.ok) throw new Error("Failed to fetch history");
+
+        const total = historyData.length;
         let recentCnt = 0;
         const now = new Date();
         const daysMap = {};
@@ -35,10 +38,9 @@ export default function Dashboard() {
           daysMap[d.toLocaleDateString('en-US', {weekday: 'short'})] = 0;
         }
 
-        snapshot.forEach(doc => {
-          const data = doc.data();
-          if (data.createdAt) {
-            const dateObj = data.createdAt.toDate();
+        historyData.forEach(doc => {
+          if (doc.createdAt) {
+            const dateObj = new Date(doc.createdAt);
             const diffMs = now - dateObj;
             if (diffMs < 24 * 60 * 60 * 1000) recentCnt++; 
             
@@ -58,9 +60,7 @@ export default function Dashboard() {
         setStats({ totalQueries: total, recentActions: recentCnt, tokensUsed: total * 150 });
         
         // Get top 4 recent
-        const activityQ = query(collection(db, "Conversations"), where("userId", "==", currentUser.uid), orderBy("createdAt", "desc"), limit(4));
-        const actSnap = await getDocs(activityQ);
-        setRecentActivity(actSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        setRecentActivity(historyData.slice(0, 4));
       } catch (err) {
         console.error("Dashboard error:", err);
       }

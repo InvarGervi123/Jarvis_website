@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { db } from '../firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { Monitor, Cpu, Volume2, Shield } from 'lucide-react';
 import './Settings.css';
 
@@ -18,10 +16,9 @@ export default function Settings() {
   useEffect(() => {
     async function loadSettings() {
       if (!currentUser) return;
-      const docRef = doc(db, 'Settings', currentUser.uid);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        setSettings(docSnap.data());
+      const saved = localStorage.getItem(`settings_${currentUser.email}`);
+      if (saved) {
+        setSettings(JSON.parse(saved));
       }
     }
     loadSettings();
@@ -36,8 +33,8 @@ export default function Settings() {
     if (!currentUser) return;
     setIsSaving(true);
     try {
-      await setDoc(doc(db, 'Settings', currentUser.uid), settings);
-      alert('Settings saved to S.I.V.R.A.J Network!');
+      localStorage.setItem(`settings_${currentUser.email}`, JSON.stringify(settings));
+      alert('Settings saved locally to S.I.V.R.A.J Network!');
     } catch (err) {
       console.error(err);
       alert('Failed to save settings.');

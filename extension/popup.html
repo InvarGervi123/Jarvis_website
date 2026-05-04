@@ -85,9 +85,6 @@
     .api-status {
       font-size: 11px;
       margin-bottom: 5px;
-      color: #ef4444;
-    }
-    .api-status.active {
       color: #10b981;
     }
   </style>
@@ -95,7 +92,6 @@
 <body>
   <div class="header-bar">
     <h3>S.I.V.R.A.J Core</h3>
-    <button class="settings-btn" id="btn-toggle-settings" title="Settings">⚙️</button>
   </div>
   
   <p style="font-size: 13px; text-align: center; color: #94a3b8; margin-bottom: 16px; margin-top: 5px;">
@@ -110,13 +106,6 @@
     Awaiting input...
   </div>
 
-  <div class="settings-area" id="settings-area">
-    <div style="font-size: 12px; margin-bottom: 5px;">Settings (BYOK)</div>
-    <div id="api-status" class="api-status">API Key: Not Set</div>
-    <input type="password" id="api-key-input" class="input-box" placeholder="Enter Gemini API Key..." />
-    <button class="btn btn-secondary" id="btn-save-key">Save Key</button>
-  </div>
-  
   <script src="popup.js"></script>
 </body>
 </html>

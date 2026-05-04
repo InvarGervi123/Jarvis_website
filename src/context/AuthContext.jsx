@@ -1,11 +1,4 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { auth } from '../firebase';
-import { 
-  onAuthStateChanged, 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword, 
-  signOut 
-} from 'firebase/auth';
 
 const AuthContext = createContext();
 
@@ -17,30 +10,60 @@ export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    const userJson = localStorage.getItem('user');
+    
+    if (token && userJson) {
+      try {
+        setCurrentUser(JSON.parse(userJson));
+      } catch (err) {
+        console.error("Failed to parse user session", err);
+      }
+    }
+    setLoading(false);
+  }, []);
+
   // Sign up
-  function signup(email, password) {
-    return createUserWithEmailAndPassword(auth, email, password);
+  async function signup(email, password) {
+    const res = await fetch('http://localhost:5000/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    
+    if (!res.ok) throw new Error(data.msg || 'Registration failed');
+    
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+    setCurrentUser(data.user);
+    return data;
   }
 
   // Log in
-  function login(email, password) {
-    return signInWithEmailAndPassword(auth, email, password);
+  async function login(email, password) {
+    const res = await fetch('http://localhost:5000/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    
+    if (!res.ok) throw new Error(data.msg || 'Login failed');
+    
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+    setCurrentUser(data.user);
+    return data;
   }
 
   // Log out
   function logout() {
-    return signOut(auth);
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setCurrentUser(null);
   }
-
-  // Listen to auth changes
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, user => {
-      setCurrentUser(user);
-      setLoading(false);
-    });
-
-    return unsubscribe;
-  }, []);
 
   const value = {
     currentUser,

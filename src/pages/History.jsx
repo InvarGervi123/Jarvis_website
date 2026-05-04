@@ -1,6 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { db } from '../firebase';
-import { collection, query, where, getDocs, orderBy, deleteDoc, doc } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext';
 import { Search, Filter, Trash2, Calendar } from 'lucide-react';
 import './History.css';
@@ -16,15 +14,21 @@ export default function History() {
   async function fetchHistory() {
     if (!currentUser) return;
     try {
-      const q = query(
-        collection(db, "Conversations"), 
-        where("userId", "==", currentUser.uid),
-        orderBy("createdAt", "desc")
-      );
-      const querySnapshot = await getDocs(q);
-      const data = querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
-      setHistory(data);
-      setFilteredHistory(data);
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      const res = await fetch('http://localhost:5000/api/ai/history', {
+        headers: { 'x-auth-token': token }
+      });
+      const data = await res.json();
+      
+      if (!res.ok) throw new Error("Failed to fetch history");
+
+      // Remap _id to id for consistency with existing UI
+      const formattedData = data.map(item => ({ id: item._id, ...item }));
+      
+      setHistory(formattedData);
+      setFilteredHistory(formattedData);
     } catch (err) {
       console.error("Error fetching history:", err);
     } finally {
@@ -54,7 +58,14 @@ export default function History() {
   async function handleDelete(id) {
     if (!window.confirm("Purge this record from the grid?")) return;
     try {
-      await deleteDoc(doc(db, "Conversations", id));
+      const token = localStorage.getItem('token');
+      const res = await fetch(`http://localhost:5000/api/ai/history/${id}`, {
+        method: 'DELETE',
+        headers: { 'x-auth-token': token }
+      });
+      
+      if (!res.ok) throw new Error("Failed to delete record");
+
       setHistory(prev => prev.filter(item => item.id !== id));
     } catch (err) {
       console.error("Failed to delete", err);
@@ -96,7 +107,7 @@ export default function History() {
                 <div className="card-header">
                   <span className={`badge badge-${item.actionType}`}>{item.actionType}</span>
                   <div className="card-actions">
-                    <span className="date-stamp"><Calendar size={14}/> {item.createdAt ? new Date(item.createdAt.toDate()).toLocaleDateString() : 'N/A'}</span>
+                    <span className="date-stamp"><Calendar size={14}/> {item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'N/A'}</span>
                     <button className="icon-btn delete" onClick={() => handleDelete(item.id)}><Trash2 size={16}/></button>
                   </div>
                 </div>
