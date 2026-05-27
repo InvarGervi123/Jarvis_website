@@ -104,6 +104,7 @@ router.post('/process', auth, async (req, res) => {
           { role: "user", content: `Format this transcription: ${transcription.text}` }
         ],
         model: "llama-3.1-8b-instant",
+        response_format: { type: "json_object" }
       });
 
       const aiResponseText = completion.choices[0].message.content;
